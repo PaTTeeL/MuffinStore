@@ -10,6 +10,6 @@
 // 添加 UITableView 属性
 @property (nonatomic, strong) UITableView *tableView;
 // 添加用于存储应用数据的属性
-@property (nonatomic, strong) NSMutableArray *appData;
+@property (nonatomic, strong) NSMutableArray *dataSource;
 
 @end
