@@ -24,55 +24,129 @@
 
 @implementation MFSRootViewController
 
-- (void)loadView
-{
-	[super loadView];
-	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadSpecifiers) name:UIApplicationWillEnterForegroundNotification object:nil];
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.navigationItem.title = @"MuffinStore";
+
+    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped]; // 使用 Grouped 样式模拟分组效果
+    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.tableView.dataSource = self;
+    self.tableView.delegate = self;
+    [self.view addSubview:self.tableView];
+
+    [self populateDataSource];
+
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleApplicationWillEnterForeground:) name:UIApplicationWillEnterForegroundNotification object:nil];
+
+    [self.tableView reloadData];
 }
 
-- (NSMutableArray*)specifiers
-{
-	if(!_specifiers)
-	{
-		_specifiers = [NSMutableArray new];
-
-		PSSpecifier* downloadGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
-		downloadGroupSpecifier.name = @"Download";
-		[_specifiers addObject:downloadGroupSpecifier];
-
-		PSSpecifier* downloadSpecifier = [PSSpecifier preferenceSpecifierNamed:@"Download" target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
-		downloadSpecifier.identifier = @"download";
-		[downloadSpecifier setProperty:@YES forKey:@"enabled"];
-		downloadSpecifier.buttonAction = @selector(downloadApp);
-		[_specifiers addObject:downloadSpecifier];
-
-		NSString* aboutText = [self getAboutText];
-		[downloadGroupSpecifier setProperty:aboutText forKey:@"footerText"];
-
-		PSSpecifier* installedGroupSpecifier = [PSSpecifier emptyGroupSpecifier];
-		installedGroupSpecifier.name = @"Installed Apps";
-		[_specifiers addObject:installedGroupSpecifier];
-
-		NSMutableArray *appSpecifiers = [NSMutableArray new];
-		[[LSApplicationWorkspace defaultWorkspace] enumerateApplicationsOfType:0 block:^(LSApplicationProxy* appProxy) {
-			PSSpecifier* appSpecifier = [PSSpecifier preferenceSpecifierNamed:appProxy.localizedName target:self set:nil get:nil detail:nil cell:PSButtonCell edit:nil];
-			[appSpecifier setProperty:appProxy.bundleURL forKey:@"bundleURL"];
-			[appSpecifier setProperty:@YES forKey:@"enabled"];
-			appSpecifier.buttonAction = @selector(downloadAppShortcut:);
-			[appSpecifiers addObject:appSpecifier];
-		}];
-		[appSpecifiers sortUsingComparator:^NSComparisonResult(PSSpecifier* a, PSSpecifier* b) {
-			return [a.name compare:b.name];
-		}];
-		[_specifiers addObjectsFromArray:appSpecifiers];
-	}
-	[(UINavigationItem *)self.navigationItem setTitle:@"MuffinStore"];
-	return _specifiers;
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillEnterForegroundNotification object:nil];
 }
 
-- (void)downloadAppShortcut:(PSSpecifier*)specifier
+- (void)handleApplicationWillEnterForeground:(NSNotification *)notification {
+    [self populateDataSource];
+    [self.tableView reloadData];
+}
+
+- (void)populateDataSource {
+    NSMutableArray *sections = [NSMutableArray array];
+
+    NSString *aboutText = [self getAboutText];
+    NSDictionary *downloadSection = @{
+        @"title": @"Download",
+        @"footer": aboutText,
+        @"rows": @[
+            @{ @"title": @"Download App by Link", @"type": @"downloadLink" } // 使用 type 标识行类型
+        ]
+    };
+    [sections addObject:downloadSection];
+
+    NSMutableArray *appRows = [NSMutableArray array];
+    [[LSApplicationWorkspace defaultWorkspace] enumerateApplicationsOfType:0 block:^(LSApplicationProxy* appProxy) {
+        NSDictionary *appRow = @{
+            @"title": appProxy.localizedName ?: @"Unknown App",
+            @"type": @"installedApp",
+            @"bundleURL": appProxy.bundleURL
+        };
+        [appRows addObject:appRow];
+    }];
+
+    [appRows sortUsingComparator:^NSComparisonResult(NSDictionary* a, NSDictionary* b) {
+        return [a[@"title"] compare:b[@"title"]];
+    }];
+
+    NSDictionary *installedSection = @{
+        @"title": @"Installed Apps",
+        @"rows": appRows
+    };
+    [sections addObject:installedSection];
+
+    self.dataSource = sections;
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    return self.dataSource.count;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    NSDictionary *sectionData = self.dataSource[section];
+    NSArray *rows = sectionData[@"rows"];
+    return rows.count;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString *cellIdentifier = @"Cell";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifier];
+
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:cellIdentifier];
+    }
+
+    NSDictionary *sectionData = self.dataSource[indexPath.section];
+    NSArray *rows = sectionData[@"rows"];
+    NSDictionary *rowData = rows[indexPath.row];
+
+    cell.textLabel.text = rowData[@"title"];
+
+    return cell;
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+    NSDictionary *sectionData = self.dataSource[section];
+    return sectionData[@"title"];
+}
+
+- (NSString *)tableView:(UITableView *)tableView titleForFooterInSection:(NSInteger)section {
+    NSDictionary *sectionData = self.dataSource[section];
+    return sectionData[@"footer"];
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+
+    NSDictionary *sectionData = self.dataSource[indexPath.section];
+    NSArray *rows = sectionData[@"rows"];
+    NSDictionary *rowData = rows[indexPath.row];
+
+    NSString *rowType = rowData[@"type"];
+
+    if ([rowType isEqualToString:@"downloadLink"]) {
+        [self downloadApp];
+    } else if ([rowType isEqualToString:@"installedApp"]) {
+        NSURL *bundleURL = rowData[@"bundleURL"];
+        if (bundleURL) {
+            [self downloadAppShortcutWithBundleURL:bundleURL];
+        } else {
+            NSLog(@"Error: Missing bundleURL for installedApp type.");
+        }
+    }
+}
+
+- (void)downloadAppShortcutWithBundleURL:(NSURL*)bundleURL
 {
-	NSURL* bundleURL = [specifier propertyForKey:@"bundleURL"];
 	NSDictionary* infoPlist = [NSDictionary dictionaryWithContentsOfFile:[bundleURL.path stringByAppendingPathComponent:@"Info.plist"]];
 	NSString* bundleId = infoPlist[@"CFBundleIdentifier"];
 	// NSLog(@"Bundle ID: %@", bundleId);
