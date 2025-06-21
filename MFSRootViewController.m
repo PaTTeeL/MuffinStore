@@ -29,7 +29,7 @@
 
     self.navigationItem.title = @"MuffinStore";
 
-    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped]; // 使用 Grouped 样式模拟分组效果
+    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tableView.dataSource = self;
     self.tableView.delegate = self;
@@ -59,7 +59,7 @@
         @"title": @"Download",
         @"footer": aboutText,
         @"rows": @[
-            @{ @"title": @"Download App by Link", @"type": @"downloadLink" } // 使用 type 标识行类型
+            @{ @"title": @"Download App by Link", @"type": @"downloadLink" }
         ]
     };
     [sections addObject:downloadSection];
@@ -145,37 +145,27 @@
     }
 }
 
-- (void)downloadAppShortcutWithBundleURL:(NSURL*)bundleURL
-{
+- (void)downloadAppShortcutWithBundleURL:(NSURL*)bundleURL {
 	NSDictionary* infoPlist = [NSDictionary dictionaryWithContentsOfFile:[bundleURL.path stringByAppendingPathComponent:@"Info.plist"]];
 	NSString* bundleId = infoPlist[@"CFBundleIdentifier"];
 	// NSLog(@"Bundle ID: %@", bundleId);
 	NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"https://itunes.apple.com/lookup?bundleId=%@&limit=1&media=software", bundleId]];
 	NSURLRequest* request = [NSURLRequest requestWithURL:url];
 	NSURLSessionDataTask* task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData* data, NSURLResponse* response, NSError* error) {
-		if(error)
-		{
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[self showAlert:@"Error" message:error.localizedDescription];
-			});
+		if (error) {
+			[self showAlert:@"Error" message:error.localizedDescription];
 			return;
 		}
 		// NSLog(@"Response: %@", [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
 		NSError* jsonError = nil;
 		NSDictionary* json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
-		if(jsonError)
-		{
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[self showAlert:@"JSON Error" message:jsonError.localizedDescription];
-			});
+		if (jsonError) {
+			[self showAlert:@"JSON Error" message:jsonError.localizedDescription];
 			return;
 		}
 		NSArray* results = json[@"results"];
-		if(results.count == 0)
-		{
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[self showAlert:@"Error" message:@"No results"];
-			});
+		if (results.count == 0) {
+			[self showAlert:@"Error" message:@"No results"];
 			return;
 		}
 		NSDictionary* app = results[0];
@@ -184,13 +174,11 @@
 	[task resume];
 }
 
-- (NSString*)getAboutText
-{
+- (NSString*)getAboutText {
 	return @"MuffinStore v1.1\nMade by Mineek\nhttps://github.com/mineek/MuffinStore";
 }
 
-- (void)showAlert:(NSString*)title message:(NSString*)message
-{
+- (void)showAlert:(NSString*)title message:(NSString*)message {
 	dispatch_async(dispatch_get_main_queue(), ^{
 		UIAlertController* alert = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:UIAlertControllerStyleAlert];
 		UIAlertAction* okAction = [UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil];
@@ -199,35 +187,25 @@
 	});
 }
 
-- (void)getAllAppVersionIdsFromServer:(long long)appId
-{
+- (void)getAllAppVersionIdsFromServer:(long long)appId {
 	//NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"http://192.168.1.180/olderVersions/%lld", appId]];
 	NSString* serverURL = @"https://apis.bilin.eu.org/history/";
 	NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"%@%lld", serverURL, appId]];
 	NSURLRequest* request = [NSURLRequest requestWithURL:url];
 	NSURLSessionDataTask* task = [[NSURLSession sharedSession] dataTaskWithRequest:request completionHandler:^(NSData* data, NSURLResponse* response, NSError* error) {
-		if(error)
-		{
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[self showAlert:@"Error" message:error.localizedDescription];
-			});
+		if (error) {
+			[self showAlert:@"Error" message:error.localizedDescription];
 			return;
 		}
 		NSError* jsonError = nil;
 		NSDictionary* json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
-		if(jsonError)
-		{
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[self showAlert:@"JSON Error" message:jsonError.debugDescription];
-			});
+		if (jsonError) {
+			[self showAlert:@"JSON Error" message:jsonError.debugDescription];
 			return;
 		}
 		NSArray* versionIds = json[@"data"];
-		if(versionIds.count == 0)
-		{
-			dispatch_async(dispatch_get_main_queue(), ^{
-				[self showAlert:@"Error" message:@"No version IDs, internal error maybe?"];
-			});
+		if (versionIds.count == 0) {
+			[self showAlert:@"Error" message:@"No version IDs, internal error maybe?"];
 			return;
 		}
 		dispatch_async(dispatch_get_main_queue(), ^{
@@ -254,44 +232,41 @@
 	[task resume];
 }
 
-- (void)promptForVersionId:(long long)appId
-{
+- (void)promptForVersionId:(long long)appId {
 	dispatch_async(dispatch_get_main_queue(), ^{
-	UIAlertController* versionAlert = [UIAlertController alertControllerWithTitle:@"Version ID" message:@"Enter the version ID of the app you want to download" preferredStyle:UIAlertControllerStyleAlert];
-	[versionAlert addTextFieldWithConfigurationHandler:^(UITextField* textField) {
-		textField.placeholder = @"Version ID";
-	}];
-	UIAlertAction* downloadAction = [UIAlertAction actionWithTitle:@"Download" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
-		long long versionId = [versionAlert.textFields.firstObject.text longLongValue];
-		[self downloadAppWithAppId:appId versionId:versionId];
-	}];
-	[versionAlert addAction:downloadAction];
-	UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
-	[versionAlert addAction:cancelAction];
-	[self presentViewController:versionAlert animated:YES completion:nil];
+		UIAlertController* versionAlert = [UIAlertController alertControllerWithTitle:@"Version ID" message:@"Enter the version ID of the app you want to download" preferredStyle:UIAlertControllerStyleAlert];
+		[versionAlert addTextFieldWithConfigurationHandler:^(UITextField* textField) {
+			textField.placeholder = @"Version ID";
+		}];
+		UIAlertAction* downloadAction = [UIAlertAction actionWithTitle:@"Download" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
+			long long versionId = [versionAlert.textFields.firstObject.text longLongValue];
+			[self downloadAppWithAppId:appId versionId:versionId];
+		}];
+		[versionAlert addAction:downloadAction];
+		UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+		[versionAlert addAction:cancelAction];
+		[self presentViewController:versionAlert animated:YES completion:nil];
 	});
 }
 
-- (void)getAllAppVersionIdsAndPrompt:(long long)appId
-{
+- (void)getAllAppVersionIdsAndPrompt:(long long)appId {
 	dispatch_async(dispatch_get_main_queue(), ^{
-	UIAlertController* promptAlert = [UIAlertController alertControllerWithTitle:@"Version ID" message:@"Do you want to enter the version ID manually or request the list of version IDs from the server?" preferredStyle:UIAlertControllerStyleAlert];
-	UIAlertAction* manualAction = [UIAlertAction actionWithTitle:@"Manual" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
-		[self promptForVersionId:appId];
-	}];
-	[promptAlert addAction:manualAction];
-	UIAlertAction* serverAction = [UIAlertAction actionWithTitle:@"Server" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
-		[self getAllAppVersionIdsFromServer:appId];
-	}];
-	[promptAlert addAction:serverAction];
-	UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
-	[promptAlert addAction:cancelAction];
-	[self presentViewController:promptAlert animated:YES completion:nil];
+		UIAlertController* promptAlert = [UIAlertController alertControllerWithTitle:@"Version ID" message:@"Do you want to enter the version ID manually or request the list of version IDs from the server?" preferredStyle:UIAlertControllerStyleAlert];
+		UIAlertAction* manualAction = [UIAlertAction actionWithTitle:@"Manual" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
+			[self promptForVersionId:appId];
+		}];
+		[promptAlert addAction:manualAction];
+		UIAlertAction* serverAction = [UIAlertAction actionWithTitle:@"Server" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
+			[self getAllAppVersionIdsFromServer:appId];
+		}];
+		[promptAlert addAction:serverAction];
+		UIAlertAction* cancelAction = [UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleCancel handler:nil];
+		[promptAlert addAction:cancelAction];
+		[self presentViewController:promptAlert animated:YES completion:nil];
 	});
 }
 
-- (void)downloadAppWithAppId:(long long)appId versionId:(long long)versionId
-{
+- (void)downloadAppWithAppId:(long long)appId versionId:(long long)versionId {
 	NSString* adamId = [NSString stringWithFormat:@"%lld", appId];
 	NSString* pricingParameters = @"pricingParameter";
 	NSString* appExtVrsId = [NSString stringWithFormat:@"%lld", versionId];
@@ -323,8 +298,7 @@
 	});
 }
 
-- (void)downloadAppWithLink:(NSString*)link
-{
+- (void)downloadAppWithLink:(NSString*)link {
 	NSString* targetAppIdParsed = nil;
 	if([link containsString:@"id"])
 	{
@@ -342,13 +316,10 @@
 		[self showAlert:@"Error" message:@"Invalid link"];
 		return;
 	}
-	dispatch_async(dispatch_get_main_queue(), ^{
-		[self getAllAppVersionIdsAndPrompt:[targetAppIdParsed longLongValue]];
-	});
+	[self getAllAppVersionIdsAndPrompt:[targetAppIdParsed longLongValue]];
 }
 
-- (void)downloadApp
-{
+- (void)downloadApp {
 	UIAlertController* linkAlert = [UIAlertController alertControllerWithTitle:@"App Link" message:@"Enter the link to the app you want to download" preferredStyle:UIAlertControllerStyleAlert];
 	[linkAlert addTextFieldWithConfigurationHandler:^(UITextField* textField) {
 		textField.placeholder = @"App Link";
