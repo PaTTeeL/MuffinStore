@@ -174,8 +174,8 @@
 	[task resume];
 }
 
-- (NSString*)getAboutText {
-	return @"MuffinStore v1.1\nMade by Mineek\nhttps://github.com/mineek/MuffinStore";
+- (NSString *)getAboutText {
+    return @"MuffinStore v1.1.1\nMade by Mineek\nhttps://github.com/mineek/MuffinStore\nCustomized by PaTTeeL";
 }
 
 - (void)showAlert:(NSString*)title message:(NSString*)message {
