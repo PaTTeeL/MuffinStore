@@ -175,7 +175,7 @@
 }
 
 - (NSString *)getAboutText {
-    return @"MuffinStore v1.1\nMade by Mineek\nhttps://github.com/mineek/MuffinStore";
+    return @"MuffinStore v1..11\nMade by Mineek\nhttps://github.com/mineek/MuffinStore\nOptimized by PaTTeeL";
 }
 
 - (void)showAlert:(NSString *)title message:(NSString *)message {
