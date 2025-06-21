@@ -12,7 +12,6 @@ APPLICATION_NAME = MuffinStore
 
 MuffinStore_FILES = $(wildcard *.m)
 MuffinStore_FRAMEWORKS = UIKit CoreGraphics CoreServices
-MuffinStore_PRIVATE_FRAMEWORKS = StoreKitUI
 MuffinStore_CFLAGS = -fobjc-arc
 MuffinStore_CODESIGN_FLAGS = -Sentitlements.plist
 
